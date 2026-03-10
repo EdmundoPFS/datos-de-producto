@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo de Datos · Entidades de Producto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #1a1a1a;
+    --surface: rgba(255,255,255,0.03);
+    --surface-hover: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.15);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255,255,255,0.6);
+    --text-tertiary: rgba(255,255,255,0.4);
+    --accent-blue:   #007AFF;
+    --accent-green:  #34C759;
+    --accent-orange: #FF9500;
+    --accent-red:    #FF3B30;
+    --accent-cyan:   #5AC8FA;
+    --accent-purple: #BF5AF2;
+    --accent-pink:   #FF2D55;
+    --accent-yellow: #FFD60A;
+
+    /* Entity accent colors */
+    --cc-color:      #007AFF;   /* blue  – CC */
+    --prod-color:    #34C759;   /* green – Product */
+    --color-color:   #BF5AF2;   /* purple– Color */
+    --sku-color:     #FF9500;   /* orange– SKU */
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary); color: var(--text-primary);
+    line-height: 1.47059; font-weight: 400; letter-spacing: -0.022em;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE ── */
+  .noise {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:1000; opacity:0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ── NAV ── */
+  .top-nav {
+    position:sticky; top:0; z-index:100;
+    background: rgba(26,26,26,0.88);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+  }
+  .nav-inner {
+    max-width:1280px; margin:0 auto;
+    display:flex; align-items:center; height:52px;
+    overflow-x:auto; gap:0;
+  }
+  .nav-inner::-webkit-scrollbar { display:none; }
+
+  /* ── NAV ENTITY GROUPS ── */
+  .nav-sep {
+    width:1px; height:20px; background:var(--border);
+    flex-shrink:0; margin:0 6px;
+  }
+  .nav-link {
+    flex-shrink:0; font-size:12px; font-weight:500; letter-spacing:-0.01em;
+    color:var(--text-tertiary); padding:6px 12px; border-radius:8px;
+    cursor:pointer; transition:all .2s; text-decoration:none; white-space:nowrap;
+  }
+  .nav-link:hover { color:var(--text-secondary); background:var(--surface); }
+  .nav-link.active { color:var(--text-primary); background:rgba(255,255,255,0.08); }
+  .nav-entity-label {
+    flex-shrink:0; font-size:10px; font-weight:700; letter-spacing:0.06em;
+    text-transform:uppercase; padding:0 8px; color:var(--text-tertiary);
+  }
+
+  /* ── PAGE ── */
+  .page-wrapper { max-width:1280px; margin:0 auto; padding:60px 40px; }
+  @media (max-width:768px) { .page-wrapper { padding:40px 20px; } }
+
+  /* ── HERO ── */
+  .hero { padding:72px 0 56px; }
+  .hero-eyebrow { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+  .hero-tag {
+    font-size:11px; font-weight:600; letter-spacing:0.07em; text-transform:uppercase;
+    color:var(--accent-blue); padding:4px 10px; border-radius:20px;
+    background:rgba(0,122,255,0.12); border:1px solid rgba(0,122,255,0.2);
+  }
+  .hero-date { font-size:12px; color:var(--text-tertiary); }
+  .hero-title {
+    font-size:clamp(36px,5vw,60px); font-weight:600; letter-spacing:-0.04em;
+    line-height:1.08; margin-bottom:16px;
+  }
+  .hero-title span { color:var(--accent-blue); }
+  .hero-subtitle {
+    font-size:17px; color:var(--text-secondary); max-width:700px;
+    line-height:1.6; letter-spacing:-0.015em; margin-bottom:32px;
+  }
+  .hero-meta { display:flex; gap:24px; flex-wrap:wrap; }
+  .hero-meta-item { display:flex; flex-direction:column; gap:2px; }
+  .hero-meta-label { font-size:11px; color:var(--text-tertiary); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; }
+  .hero-meta-value { font-size:13px; color:var(--text-secondary); font-weight:500; }
+
+  /* ── ENTITY DIAGRAM ── */
+  .er-diagram {
+    display:flex; align-items:center; justify-content:center;
+    flex-wrap:wrap; gap:0; padding:28px; margin:16px 0;
+    background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px;
+    overflow-x:auto;
+  }
+  .er-box {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:16px 24px; border-radius:14px; border:1.5px solid; text-align:center;
+    flex-shrink:0; min-width:110px;
+  }
+  .er-box-icon { font-size:22px; }
+  .er-box-name { font-size:13px; font-weight:700; letter-spacing:-0.015em; }
+  .er-box-id { font-size:10px; font-weight:500; opacity:.6; font-family:'SF Mono','Fira Code',monospace; }
+  .er-arrow {
+    display:flex; flex-direction:column; align-items:center; padding:0 12px;
+    color:var(--text-tertiary); font-size:14px;
+  }
+  .er-arrow-label { font-size:10px; color:var(--text-tertiary); white-space:nowrap; }
+
+  /* ── SECTION CARDS ── */
+  .section-card {
+    border-radius:20px; padding:36px; margin-bottom:24px;
+  }
+  .section-header { display:flex; align-items:flex-start; gap:14px; margin-bottom:24px; }
+  .section-accent { width:4px; border-radius:2px; min-height:44px; flex-shrink:0; }
+  .section-icon { font-size:28px; margin-bottom:4px; }
+  .section-title { font-size:20px; font-weight:700; letter-spacing:-0.025em; margin-bottom:4px; }
+  .section-subtitle { font-size:12px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; opacity:.5; margin-bottom:6px; }
+  .section-desc { font-size:13px; color:var(--text-tertiary); line-height:1.5; }
+
+  /* ── ENTITY BADGE ── */
+  .entity-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 12px 4px 8px; border-radius:20px; border:1px solid;
+    font-size:11px; font-weight:700; letter-spacing:0.04em;
+  }
+  .entity-badge-dot { width:6px; height:6px; border-radius:50%; }
+
+  /* ── SUB-LABEL ── */
+  .sub-label {
+    font-size:11px; font-weight:700; color:var(--text-tertiary);
+    text-transform:uppercase; letter-spacing:0.07em;
+    margin:28px 0 12px; display:flex; align-items:center; gap:10px;
+  }
+  .sub-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── TABLES ── */
+  table { width:100%; border-collapse:collapse; font-size:13px; margin:0 0 4px; }
+  thead th {
+    text-align:left; padding:9px 12px;
+    color:var(--text-tertiary); font-weight:600;
+    font-size:10px; text-transform:uppercase; letter-spacing:0.07em;
+    border-bottom:1px solid var(--border); background:transparent;
+  }
+  tbody td {
+    padding:11px 12px; border-bottom:1px solid rgba(255,255,255,0.04);
+    color:var(--text-secondary); vertical-align:top;
+  }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:hover td { background:rgba(255,255,255,0.02); }
+  td.field { color:var(--text-primary) !important; font-weight:600 !important; font-family:'SF Mono','Fira Code',monospace; font-size:12px; white-space:nowrap; }
+  td.desc { max-width:320px; line-height:1.55; }
+  td.values { font-size:12px; color:var(--text-tertiary); line-height:1.6; }
+  td.origin { text-align:center; white-space:nowrap; }
+
+  /* ── PILLS ── */
+  .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:0.02em; white-space:nowrap; }
+  .pill-green  { background:rgba(52,199,89,0.15);  color:#34C759; border:1px solid rgba(52,199,89,0.2); }
+  .pill-orange { background:rgba(255,149,0,0.15);  color:#FF9500; border:1px solid rgba(255,149,0,0.2); }
+  .pill-red    { background:rgba(255,59,48,0.15);  color:#FF3B30; border:1px solid rgba(255,59,48,0.2); }
+  .pill-blue   { background:rgba(0,122,255,0.15);  color:#007AFF; border:1px solid rgba(0,122,255,0.2); }
+  .pill-purple { background:rgba(191,90,242,0.15); color:#BF5AF2; border:1px solid rgba(191,90,242,0.2); }
+  .pill-cyan   { background:rgba(90,200,250,0.15); color:#5AC8FA; border:1px solid rgba(90,200,250,0.2); }
+  .pill-pink   { background:rgba(255,45,85,0.15);  color:#FF2D55; border:1px solid rgba(255,45,85,0.2); }
+  .pill-yellow { background:rgba(255,214,10,0.15); color:#FFD60A; border:1px solid rgba(255,214,10,0.2); }
+  .pill-grey   { background:rgba(255,255,255,0.06); color:var(--text-tertiary); border:1px solid var(--border); }
+
+  /* Origin pills */
+  .pill-orig-maestro  { background:rgba(0,122,255,0.12);  color:#007AFF; border:1px solid rgba(0,122,255,0.25);  }
+  .pill-orig-comprador{ background:rgba(191,90,242,0.12); color:#BF5AF2; border:1px solid rgba(191,90,242,0.25); }
+  .pill-orig-ia       { background:rgba(255,45,85,0.12);  color:#FF2D55; border:1px solid rgba(255,45,85,0.25);  }
+  .pill-orig-sistema  { background:rgba(90,200,250,0.12); color:#5AC8FA; border:1px solid rgba(90,200,250,0.25); }
+  .pill-orig-externo  { background:rgba(255,149,0,0.12);  color:#FF9500; border:1px solid rgba(255,149,0,0.25);  }
+  .pill-orig-tbd      { background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.25); border:1px solid rgba(255,255,255,0.08); }
+
+  /* ── CODE ── */
+  code {
+    font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
+    background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:6px;
+    font-size:0.84em; color:var(--accent-cyan); border:1px solid rgba(255,255,255,0.06);
+  }
+  pre {
+    background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:14px;
+    padding:18px 22px; overflow-x:auto;
+    font-family:'SF Mono','Fira Code','Cascadia Code',monospace;
+    font-size:12px; line-height:1.65; margin:14px 0; color:var(--text-secondary);
+  }
+  pre .c  { color:var(--text-tertiary); }
+  pre .k  { color:var(--accent-blue); }
+  pre .s  { color:var(--accent-green); }
+  pre .w  { color:var(--accent-orange); }
+
+  /* ── TREE ── */
+  .tree {
+    background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:14px;
+    padding:20px 24px; font-family:'SF Mono','Fira Code',monospace;
+    font-size:12px; line-height:1.75; overflow-x:auto; margin:14px 0; color:var(--text-secondary);
+  }
+  .tree .node { color:var(--accent-blue); font-weight:600; }
+  .tree .leaf { color:var(--accent-green); }
+  .tree .comment { color:var(--text-tertiary); font-style:italic; }
+  .tree .warn { color:var(--accent-orange); font-weight:600; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    padding:14px 18px; border-radius:12px; font-size:13px;
+    color:var(--text-secondary); line-height:1.6; border-left:3px solid; margin:14px 0;
+  }
+  .callout-blue   { background:rgba(0,122,255,0.07);   border-color:var(--accent-blue);   border:1px solid rgba(0,122,255,0.18);   border-left:3px solid var(--accent-blue); }
+  .callout-green  { background:rgba(52,199,89,0.07);   border-color:var(--accent-green);  border:1px solid rgba(52,199,89,0.18);   border-left:3px solid var(--accent-green); }
+  .callout-orange { background:rgba(255,149,0,0.07);   border-color:var(--accent-orange); border:1px solid rgba(255,149,0,0.18);   border-left:3px solid var(--accent-orange); }
+  .callout-purple { background:rgba(191,90,242,0.07);  border-color:var(--accent-purple); border:1px solid rgba(191,90,242,0.18);  border-left:3px solid var(--accent-purple); }
+  .nota {
+    margin-top:14px; padding:12px 16px; border-radius:10px;
+    background:rgba(255,255,255,0.025); border:1px solid var(--border);
+    font-size:12px; color:var(--text-tertiary); line-height:1.6;
+  }
+
+  /* ── INNER CARD ── */
+  .inner-card {
+    border-radius:14px; padding:18px 20px; margin:10px 0;
+    background:rgba(255,255,255,0.02); border:1px solid var(--border);
+  }
+  .inner-card-title {
+    font-size:12px; font-weight:700; margin-bottom:10px;
+    color:var(--text-primary); letter-spacing:-0.01em;
+    text-transform:uppercase; opacity:.7;
+  }
+
+  /* ── TWO-COL / THREE-COL ── */
+  .two-col   { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0; }
+  .three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:14px 0; }
+  @media (max-width:900px) { .two-col, .three-col { grid-template-columns:1fr; } }
+
+  /* ── TYPE TABS (switcher) ── */
+  .type-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .type-tab {
+    padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600;
+    border:1px solid var(--border); color:var(--text-tertiary); cursor:default;
+  }
+
+  /* ── APPLY GRID ── */
+  .apply-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border-radius:14px; overflow:hidden; border:1px solid var(--border); margin:14px 0; }
+  @media(max-width:700px) { .apply-grid { grid-template-columns:1fr; } }
+  .apply-col { padding:0; }
+  .apply-header { padding:10px 16px; font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; border-bottom:1px solid var(--border); }
+  .apply-header-yes { color:var(--accent-green); background:rgba(52,199,89,0.06); }
+  .apply-header-no  { color:var(--accent-orange); background:rgba(255,149,0,0.06); border-left:1px solid var(--border); }
+  .apply-item { display:flex; align-items:flex-start; gap:8px; padding:9px 16px; font-size:12px; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.04); line-height:1.45; }
+  .apply-item:last-child { border-bottom:none; }
+  .apply-col-no .apply-item { border-left:1px solid var(--border); }
+
+  /* ── FOOTER ── */
+  .footer-line {
+    border-top:1px solid var(--border); padding-top:24px; margin-top:40px;
+    text-align:center; font-size:12px; color:var(--text-tertiary);
+  }
+
+  /* ── LEGEND BOX ── */
+  .legend-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin:14px 0; }
+  .legend-item {
+    display:flex; align-items:flex-start; gap:10px; padding:12px 14px;
+    border-radius:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border);
+    font-size:12px; color:var(--text-secondary); line-height:1.5;
+  }
+  .legend-item strong { color:var(--text-primary); }
+/* ── COLLAPSIBLE SUB-SECTIONS ── */
+  .collapsible-trigger {
+    cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .collapsible-trigger::after { content:''; flex:1; height:1px; background:var(--border); }
+  .collapsible-trigger .caret {
+    margin-left: auto; flex-shrink:0;
+    width:18px; height:18px; border-radius:50%;
+    background: rgba(255,255,255,0.06);
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; color:var(--text-tertiary);
+    transition: transform 0.25s ease, background 0.2s;
+  }
+  .collapsible-trigger:hover .caret { background: rgba(255,255,255,0.1); color:var(--text-secondary); }
+  .collapsible-trigger.open .caret { transform: rotate(180deg); }
+  .collapsible-body {
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease;
+    opacity: 1;
+  }
+  .collapsible-body.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<!-- ══ NAV ══ -->
+<nav class="top-nav">
+  <div class="nav-inner">
+    <a class="nav-link active" href="#overview">Overview</a>
+    <a class="nav-link" href="#origen">Orígenes</a>
+    <div class="nav-sep"></div>
+    <span class="nav-entity-label" style="color:var(--cc-color);">CC</span>
+    <a class="nav-link" href="#cc-identity">Identidad</a>
+    <a class="nav-link" href="#cc-props">Propiedades</a>
+    <a class="nav-link" href="#cc-data">Datos</a>
+    <div class="nav-sep"></div>
+    <span class="nav-entity-label" style="color:var(--prod-color);">Producto</span>
+    <a class="nav-link" href="#prod-identity">Identidad</a>
+    <a class="nav-link" href="#prod-props">Propiedades</a>
+    <a class="nav-link" href="#prod-data">Datos</a>
+    <div class="nav-sep"></div>
+    <span class="nav-entity-label" style="color:var(--color-color);">Color</span>
+    <a class="nav-link" href="#color-identity">Identidad</a>
+    <a class="nav-link" href="#color-props">Propiedades</a>
+    <a class="nav-link" href="#color-data">Datos</a>
+    <div class="nav-sep"></div>
+    <span class="nav-entity-label" style="color:var(--sku-color);">SKU</span>
+    <a class="nav-link" href="#sku-identity">Identidad</a>
+    <a class="nav-link" href="#sku-props">Propiedades</a>
+    <a class="nav-link" href="#sku-data">Datos</a>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+
+<!-- ══════════════════════════════════════ HERO ══════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-eyebrow">
+    <span class="hero-tag">Data Model v3</span>
+    <span class="hero-date">Marzo 2026</span>
+  </div>
+  <h1 class="hero-title">Modelo de datos de<br><span>Producto y CC</span></h1>
+  <div class="hero-subtitle">Modelo estructurado en torno a las <strong style="color:var(--text-primary)">4 entidades principales</strong>: Componente Comercial, Producto, Color y SKU. Extraído de 15 responses reales de <code style="background:rgba(0,122,255,0.12);color:var(--accent-blue);border-color:rgba(0,122,255,0.2);">GetCommercialComponent v1</code> cubriendo múltiples marcas, tipologías y mercados.</div>
+  <div class="hero-meta">
+    <div class="hero-meta-item"><span class="hero-meta-label">Fuente</span><span class="hero-meta-value">response1–5 + responseA–J</span></div>
+    <div class="hero-meta-item"><span class="hero-meta-label">API</span><span class="hero-meta-value">GetCC v1 (gRPC)</span></div>
+    <div class="hero-meta-item"><span class="hero-meta-label">Marcas</span><span class="hero-meta-value">Zara · Massimo Dutti · Zara Home</span></div>
+    <div class="hero-meta-item"><span class="hero-meta-label">Mercados</span><span class="hero-meta-value">ES · SA · US</span></div>
+    <div class="hero-meta-item"><span class="hero-meta-label">Tipologías</span><span class="hero-meta-value">Wear · Home · Fragance · Bundle · Kids</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ OVERVIEW ══════════════════════════════════════ -->
+<div id="overview" class="surface section-card">
+  <div class="section-header">
+    <div class="section-accent" style="background:var(--accent-blue);"></div>
+    <div>
+      <div class="section-subtitle">Modelo</div>
+      <div class="section-title">Las 4 entidades principales</div>
+      <div class="section-desc">Jerarquía y relaciones entre Componente Comercial, Producto, Color y SKU</div>
+    </div>
+  </div>
+
+  <div class="er-diagram">
+    <div class="er-box" style="background:rgba(0,122,255,0.08);border-color:rgba(0,122,255,0.3);">
+      <div class="er-box-icon">🛍️</div>
+      <div class="er-box-name" style="color:var(--cc-color);">Componente Comercial</div>
+      <div class="er-box-id">cc_id · seo_id · styling</div>
+    </div>
+    <div class="er-arrow">
+      <span>→</span>
+      <span class="er-arrow-label">vincula a</span>
+    </div>
+    <div class="er-box" style="background:rgba(52,199,89,0.08);border-color:rgba(52,199,89,0.3);">
+      <div class="er-box-icon">📦</div>
+      <div class="er-box-name" style="color:var(--prod-color);">Producto</div>
+      <div class="er-box-id">model · quality · reference</div>
+    </div>
+    <div class="er-arrow">
+      <span>→</span>
+      <span class="er-arrow-label">tiene</span>
+    </div>
+    <div class="er-box" style="background:rgba(191,90,242,0.08);border-color:rgba(191,90,242,0.3);">
+      <div class="er-box-icon">🎨</div>
+      <div class="er-box-name" style="color:var(--color-color);">Color</div>
+      <div class="er-box-id">color_id · name</div>
+    </div>
+    <div class="er-arrow">
+      <span>→</span>
+      <span class="er-arrow-label">contiene</span>
+    </div>
+    <div class="er-box" style="background:rgba(255,149,0,0.08);border-color:rgba(255,149,0,0.3);">
+      <div class="er-box-icon">🏷️</div>
+      <div class="er-box-name" style="color:var(--sku-color);">SKU</div>
+      <div class="er-box-id">sku_id · size · tariffs</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════ LEYENDA ORÍGENES ══════════════════════════════════════ -->
+<div id="origen" class="surface section-card">
+  <div class="section-header">
+    <div class="section-accent" style="background:var(--accent-yellow);"></div>
+    <div>
+      <div class="section-subtitle">Referencia global</div>
+      <div class="section-title">Leyenda de orígenes de datos</div>
+      <div class="section-desc">Columna <strong style="color:var(--text-primary)">Origen</strong> presente en todas las tablas de campos</div>
+    </div>
+  </div>
+
+  <div class="legend-grid">
+    <div class="legend-item">
+      <span class="pill pill-orig-maestro">Maestro</span>
+      <div><strong>Maestro de producto</strong><br>Dato introducido en el sistema maestro de la empresa (ERP/MDM). Ej: nombre, familia, composición, instrucciones de cuidado.</div>
+    </div>
+    <div class="legend-item">
+      <span class="pill pill-orig-comprador">Comercial</span>
+      <div><strong>Equipo comercial / compras</strong><br>Clasificaciones y atributos asignados por el equipo comercial y de compras. Ej: DYNAMICGRIDFILTER, COMMERCIAL_ATTRIBUTE, Smart_tags.</div>
+    </div>
+    <div class="legend-item">
+      <span class="pill pill-orig-ia">IA</span>
+      <div><strong>Detectado por IA/ML</strong><br>Generado automáticamente a partir del análisis de imagen o contexto. Ej: XDISTINCTIVECOLOR, COLOR_HEXCODE_PERCENTAGE.</div>
+    </div>
+    <div class="legend-item">
+      <span class="pill pill-orig-sistema">Sistema</span>
+      <div><strong>Generado por el sistema</strong><br>Calculado o asignado automáticamente por la plataforma. Ej: cc_id, sku_id, state, state_by_date, visibility intervals.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ████████████████████████████████████████████████████████████
+     ENTIDAD 1 · COMPONENTE COMERCIAL
+     ████████████████████████████████████████████████████████████ -->
+
+<div style="display:flex;align-items:center;gap:14px;margin:40px 0 16px;">
+  <div style="flex:1;height:1px;background:rgba(0,122,255,0.25);"></div>
+  <span class="entity-badge" style="background:rgba(0,122,255,0.1);border-color:rgba(0,122,255,0.3);color:var(--cc-color);">
+    <span class="entity-badge-dot" style="background:var(--cc-color);"></span>
+    ENTIDAD 1 · COMPONENTE COMERCIAL
+  </span>
+  <div style="flex:1;height:1px;background:rgba(0,122,255,0.25);"></div>
+</div>
+
+<!-- CC · IDENTIDAD -->
+<div id="cc-identity" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-cc-identity" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--cc-color);"></div>
+    <div>
+      <div class="section-icon">🛍️</div>
+      <div class="section-subtitle" style="color:var(--cc-color);">Componente Comercial</div>
+      <div class="section-title">Identidad</div>
+      <div class="section-desc">Campos que identifican unívocamente a un CC. Su referencia codifica modelo, quality, color y styling.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-cc-identity">
+
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="field">cc_id</td>
+        <td class="values">Entero largo<br><code>528915645</code></td>
+        <td class="desc">Identificador interno único del CC. Clave primaria del sistema.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">seo.id</td>
+        <td class="values">String<br><code>"T9396616786"</code> / <code>"02223399"</code></td>
+        <td class="desc">ID SEO del CC. Para Product CC coincide con la referencia de producto (sin campaña). Para Bundle CC lleva prefijo <strong>T</strong>.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">variant.color.id</td>
+        <td class="values">String numérico<br><code>"786"</code>, <code>"802"</code>, <code>"999"</code></td>
+        <td class="desc">Color al que pertenece este CC. Es parte de la "firma" que lo identifica junto al styling.</td>
+        <td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td>
+      </tr>
+      <tr>
+        <td class="field">variant.style_id</td>
+        <td class="values">Entero<br><code>0</code>, <code>1</code>, <code>20</code>, <code>300</code>, <code>530</code>, <code>540</code>, <code>560</code>…</td>
+        <td class="desc">Estilismo del CC. <strong>0</strong> = BASESTYLE (base). Valores más altos indican variantes para mercados específicos, ediciones o usos editoriales. Ver tabla de rangos.</td>
+        <td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td>
+      </tr>
+      <tr>
+        <td class="field">seo.keyword<br>.translations</td>
+        <td class="values">Mapa idioma → slug<br><code>en-GB: "asymmetric-satin-top"</code><br><code>ar-SA: "…"</code></td>
+        <td class="desc">Keywords SEO por idioma/mercado. Vacío en Bundle CC. Los idiomas presentes indican en qué mercados está activo el CC.</td>
+        <td class="origin"><span class="pill pill-orig-tbd">TBD</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-1"><span>Decodificación de la referencia CC</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-1">
+  <div class="inner-card">
+    <div class="inner-card-title">Formato Product CC — C{modelo}{quality}{color}{styling}-V{campaña}</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0;margin-top:8px;">
+      <div style="padding:8px 14px;border-radius:8px;background:rgba(0,122,255,0.1);border:1px solid rgba(0,122,255,0.25);font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:700;color:var(--accent-blue);">C</div>
+      <div style="padding:0 6px;font-size:12px;color:var(--text-tertiary);">prefijo</div>
+      <div style="padding:8px 14px;border-radius:8px;background:rgba(52,199,89,0.1);border:1px solid rgba(52,199,89,0.25);font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:700;color:var(--accent-green);">0077<span style="opacity:.5;">4</span></div>
+      <div style="padding:0 6px;font-size:12px;color:var(--text-tertiary);">modelo</div>
+      <div style="padding:8px 14px;border-radius:8px;background:rgba(191,90,242,0.1);border:1px solid rgba(191,90,242,0.25);font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:700;color:var(--accent-purple);">350</div>
+      <div style="padding:0 6px;font-size:12px;color:var(--text-tertiary);">quality</div>
+      <div style="padding:8px 14px;border-radius:8px;background:rgba(90,200,250,0.1);border:1px solid rgba(90,200,250,0.25);font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:700;color:var(--accent-cyan);">802</div>
+      <div style="padding:0 6px;font-size:12px;color:var(--text-tertiary);">color</div>
+      <div style="padding:8px 14px;border-radius:8px;background:rgba(255,149,0,0.1);border:1px solid rgba(255,149,0,0.25);font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:700;color:var(--accent-orange);">000</div>
+      <div style="padding:0 6px;font-size:12px;color:var(--text-tertiary);">styling</div>
+      <div style="padding:8px 14px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:var(--text-tertiary);">-V2026</div>
+      <div style="padding:0 6px;font-size:12px;color:var(--text-tertiary);">campaña</div>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-tertiary);">Bundle CC usa prefijo <strong style="color:var(--accent-orange);">T</strong> en lugar de <strong>C</strong>, sin campo styling.</div>
+  </div>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-2"><span>Rangos de style_id y su significado</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-2">
+  <table>
+    <thead><tr><th>Rango</th><th>STYLING_INFO attr</th><th>Descripción</th><th>Ejemplos observados</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">0</td><td><span class="pill pill-green">BASESTYLE</span></td><td>CC base / principal</td><td>Todos los productos</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">1</td><td><span class="pill pill-cyan">STYLES</span></td><td>Estilismo alternativo</td><td>responseB (Falda)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">20–29</td><td><span class="pill pill-purple">EDITION / EDITORIAL</span></td><td>Edición especial o sesión editorial</td><td>Perfume, Collares, Pantalón</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">80–89</td><td><span class="pill pill-grey">(sin attr)</span></td><td>Estilismos auxiliares internos</td><td>Perfume OUD</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">300–399</td><td><span class="pill pill-yellow">KID / específico</span></td><td>Reservado Kids u otras secciones</td><td>responseG (Baño Niño)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">530–539</td><td><span class="pill pill-orange">CHINA</span></td><td>Variante mercado China</td><td>Jeans 0774</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">540–549</td><td><span class="pill pill-grey">(específico marca)</span></td><td>Variante Massimo Dutti u otras marcas</td><td>responseD (Trench MD)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">560–569</td><td><span class="pill pill-cyan">ARABES</span></td><td>Variante mercado árabe (SA, AE…)</td><td>responseA (Camisa)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+</div></div>
+
+<!-- CC · PROPIEDADES -->
+<div id="cc-props" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-cc-props" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--cc-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--cc-color);">Componente Comercial</div>
+      <div class="section-title">Propiedades y atributos</div>
+      <div class="section-desc">Estado, atributos y tipo de CC.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-cc-props">
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="cc-estado"><span>Estado</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="cc-estado">
+  <table>
+    <thead><tr><th>Campo</th><th>Valores posibles</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="field">state</td>
+        <td class="values"><span class="pill pill-green">CC_STATE_VISIBLE</span><br><span class="pill pill-red">CC_STATE_NOT_VISIBLE</span></td>
+        <td class="desc">Estado actual del CC. Determina si es presentable.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">state_by_date.value</td>
+        <td class="values"><span class="pill pill-green">CC_STATE_VISIBLE</span><br><span class="pill pill-red">CC_STATE_NOT_VISIBLE</span></td>
+        <td class="desc">Estado calculado en el momento de la consulta (con fecha adjunta). Puede diferir de <code>state</code> si hay cambios pendientes.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">state_by_date.date</td>
+        <td class="values">ISO 8601<br><code>"2026-03-10T08:42:51Z"</code></td>
+        <td class="desc">Timestamp del cálculo del estado.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="cc-attrs"><span>Atributos del CC (attributes[])</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="cc-attrs">
+  <table>
+    <thead><tr><th>Subtype</th><th>Tipo attr</th><th>Identifier (ejemplos)</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">STYLING_INFO</td><td><span class="pill pill-green">Mark</span></td><td><code>BASESTYLE</code> · <code>EDITION</code> · <code>EDITORIAL</code> · <code>BASICS</code> · <code>CHINA</code> · <code>ARABES</code></td><td>Rol del CC dentro del conjunto de estilismos del color</td><td class="origin"><span class="pill pill-orig-comprador">Comercial</span></td></tr>
+      <tr><td class="field">XDISTINCTIVECOLOR</td><td><span class="pill pill-blue">Valued</span></td><td><code>XDISTINCTIVECOLOR</code></td><td>Color dominante del CC en hexadecimal. Ej: <code>#434343</code></td><td class="origin"><span class="pill pill-orig-ia">IA</span></td></tr>
+      <tr><td class="field">COLOR_HEXCODE_PERCENTAGE</td><td><span class="pill pill-blue">Valued</span></td><td><code>COLOR_HEXCODE_PERCENTAGE_1</code>, <code>_2</code>…</td><td>Porcentaje de cada tono en el producto (swatch multi-tono)</td><td class="origin"><span class="pill pill-orig-ia">IA</span></td></tr>
+      <tr><td class="field">SMART_TAG</td><td><span class="pill pill-blue">Valued</span></td><td><code>COLOR-1</code> · <code>MATERIAL-0</code></td><td>Color y material detectados por IA. Ej: <code>"LEATHER-8"</code></td><td class="origin"><span class="pill pill-orig-comprador">Comercial</span> <span class="pill pill-orig-ia">IA</span><br><span style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Nuevo flujo de etiquetado</span></td></tr>
+      <tr><td class="field">—</td><td><span class="pill pill-pink">Smart_tag</span></td><td><code>TAG_{SECTION}_3_SECTION</code><br><code>TAG_{BODY}_3_LAYERS</code><br><code>TAG_TRYON SELECTION_3_COLLECTION</code><br><code>TAG_{PAIS} XSELLING ACTION_3_COLLECTION</code><br><code>TAG_BASE DE VENTA_3_COLLECTION</code></td><td>Tags de etiquetado comercial. Patrón: <code>TAG_{NOMBRE}_{V}_{TAXONOMIA}</code>. Cubren sección, parte del cuerpo, selección probador virtual, acciones cross-selling por mercado y clasificación de venta.</td><td class="origin"><span class="pill pill-orig-comprador">Comercial</span></td></tr>
+      <tr><td class="field">DYNAMICGRIDFILTER_*</td><td><span class="pill pill-purple">Label</span></td><td><code>C-CRO-PANTALONES</code> · <code>C-SRA-BASIC_BUYER</code> · <code>C-CRO-RELAXED_FIT</code>…</td><td>Filtros de parrilla posibles en base a las propiedades y atributos del producto. Patrón: <code>C-{BUYER_CODE}-{TIPO}</code></td><td class="origin"><span class="pill pill-orig-comprador">Comercial</span></td></tr>
+      <tr><td class="field">XCOLLECTION</td><td><span class="pill pill-green">Mark</span></td><td><code>[58368]VIBRANT_LEATHER</code></td><td>Colección comercial a la que pertenece el CC</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XPROMOTION</td><td><span class="pill pill-green">Mark</span></td><td><code>DEVO_NON_RETURNABLE</code> · <code>PROMO_PACKS</code></td><td>Flags de política de devolución y promociones</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+  </div></div></div>
+
+<!-- CC · OTROS DATOS -->
+<div id="cc-data" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-cc-data" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--cc-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--cc-color);">Componente Comercial</div>
+      <div class="section-title">Otros datos: Visibilidad, Media y Relaciones</div>
+      <div class="section-desc">Datos operativos del CC: cuándo se publica, qué imágenes tiene y con qué otros CCs se relaciona.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-cc-data">
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-3"><span>Visibilidad (visibility.intervals[])</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-3">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="field">visible_from.date</td>
+        <td class="values">ISO 8601<br><code>"2026-03-09T17:25:00Z"</code></td>
+        <td class="desc">Fecha/hora desde la que el CC es visible. Si no hay <code>visible_to</code>, es visible indefinidamente.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">visible_from.code</td>
+        <td class="values">String milestone<br><code>"billCycle-21-02-2026"</code><br><code>"night-propagation-…"</code><br><code>"midday-propagation-…"</code></td>
+        <td class="desc">Código del evento de propagación que activó la visibilidad. Identifica el ciclo de publicación.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">visible_to</td>
+        <td class="values">ISO 8601 (opcional)<br>— si no existe, indefinido</td>
+        <td class="desc">Fecha fin de visibilidad. Su ausencia significa que el CC no tiene fecha de caducidad programada.</td>
+        <td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-4"><span>Media (media.json[] — cada asset)</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-4">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">originalName (f)</td><td class="values"><code>p</code> · <code>e1</code>–<code>e4</code> · <code>a1</code>–<code>a5</code> · <code>r</code> · <code>f1</code> · <code>ult2</code> · <code>o1</code>–<code>o2</code></td><td class="desc">Nombre del asset que indica su tipo. <code>p</code>=portada, <code>e</code>=editorial, <code>a</code>=detalle, <code>r</code>=recortada, <code>ult</code>=última posición/bundle.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">k (kind)</td><td class="values"><code>0</code>=detalle · <code>1</code>=principal · <code>5</code>=editorial · <code>7</code>=recortada · <code>9</code>=última posición</td><td class="desc">Tipo de imagen.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">s (styling)</td><td class="values">Entero — coincide con style_id del CC</td><td class="desc">A qué estilismo pertenece este asset.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">w / h</td><td class="values"><code>2048×3072</code> (portrait)<br><code>4000×2500</code> (landscape)</td><td class="desc">Dimensiones en píxeles. Las imágenes <code>ult2</code>/bundle son landscape (horizontal).</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">d (timestamp)</td><td class="values">Unix ms<br><code>1773052258878</code></td><td class="desc">Timestamp de última modificación del asset. Usado como cache-buster en la URL.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">P (positions)</td><td class="values"><code>[{"p":0,"o":0}]</code></td><td class="desc">Posiciones del asset: <code>p</code>=página, <code>o</code>=orden dentro de la página.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">deliveryUrl</td><td class="values">URL<br><code>https://static.zara.net/…</code></td><td class="desc">URL de entrega del asset en CDN.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">transparencyPath</td><td class="values">Path (opcional) o <code>null</code></td><td class="desc">Ruta a la versión con fondo transparente (PNG). Presente en kind=7 (recortada).</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">modelId</td><td class="values">String (opcional)<br><code>"18347"</code></td><td class="desc">ID del modelo (persona) de la foto. Solo presente en algunas imágenes de ropa.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-5"><span>Relaciones (relations{})</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-5">
+  <table>
+    <thead><tr><th>Tipo</th><th>Estructura</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">PACMAN-LOOK</td><td class="values"><code>{ cc_ids: [{value:"…"}] }</code></td><td class="desc">CCs que forman el look/outfit completo en el que aparece este CC. Usado para cross-selling en el PDP.</td><td class="origin"><span class="pill pill-orig-comprador">Comercial</span></td></tr>
+      <tr><td class="field">OTHER_COLOR</td><td class="values"><code>{ cc_ids: [{value:"…"}] }</code></td><td class="desc">Otros CCs del mismo producto en diferentes colores. Permite navegar entre colores desde el PDP.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">SIMILAR</td><td class="values"><code>{ cc_ids: [{value:"…"}] }</code></td><td class="desc">CCs de productos similares (recomendación).</td><td class="origin"><span class="pill pill-orig-tbd">TBD</span></td></tr>
+      <tr><td class="field">COMPLEMENTARY</td><td class="values"><code>{ cc_ids: [{value:"…"}] }</code></td><td class="desc">CCs de productos complementarios (recomendación).</td><td class="origin"><span class="pill pill-orig-tbd">TBD</span></td></tr>
+    </tbody>
+  </table>
+  <div class="nota">Las relaciones existen en dos niveles: <strong>root-level</strong> (<code>payload[].relations</code>) para el CC solicitado, y <strong>CC-level</strong> (<code>colors[].ccs[].relations</code>) para cada CC listado dentro del color. Todos los tipos comparten la misma estructura <code>{ cc_ids[] }</code>.</div>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-6"><span>Bundle CC — datos adicionales (bundle{})</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-6">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">bundle.identifier</td><td class="values">id · reference (prefijo <strong>T</strong>) · model · quality</td><td class="desc">Identidad del bundle. Referencia siempre empieza por <code>T</code> en lugar de <code>C</code>.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">bundle.kind</td><td class="values"><code>"Wear"</code></td><td class="desc">Tipo de bundle. Único valor observado.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">bundle.components[]</td><td class="values"><code>{ cc_id, product_id, is_main_component: false, skus: [] }</code></td><td class="desc">Lista de CCs componentes del bundle. <code>is_main_component</code> siempre <code>false</code> en los datos observados.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">bundle.groups[]</td><td class="values"><code>{ name, position, relations[] }</code><br>relations: <code>{ cc_id, product_id, color_id, position }</code></td><td class="desc">Agrupación de los componentes con posición de presentación y color explícito.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">bundle.publication_dates[]</td><td class="values">Array (puede estar vacío)</td><td class="desc">Fechas de publicación programadas del bundle.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+    </div>
+<div class="apply-grid">
+    <div class="apply-col">
+      <div class="apply-header apply-header-yes">✅ Product CC</div>
+      <div class="apply-item">Prefijo referencia: <strong>C</strong></div>
+      <div class="apply-item">Campo principal: <code>product {}</code></div>
+      <div class="apply-item">SEO keywords: completo (idiomas por mercado)</div>
+      <div class="apply-item">Tariffs propios: Sí (en SKUs del Producto)</div>
+      <div class="apply-item">Contiene jerarquía completa Producto→Color→SKU</div>
+    </div>
+    <div class="apply-col">
+      <div class="apply-header apply-header-no">📦 Bundle CC</div>
+      <div class="apply-item">Prefijo referencia: <strong>T</strong></div>
+      <div class="apply-item">Campo principal: <code>bundle {}</code></div>
+      <div class="apply-item">SEO keywords: vacío</div>
+      <div class="apply-item">Sin tariffs propios (están en los CCs componentes)</div>
+      <div class="apply-item">Solo referencias a CCs; hay que consultarlos por separado</div>
+    </div>
+  </div>
+</div></div>
+
+
+<!-- ████████████████████████████████████████████████████████████
+     ENTIDAD 2 · PRODUCTO
+     ████████████████████████████████████████████████████████████ -->
+
+<div style="display:flex;align-items:center;gap:14px;margin:40px 0 16px;">
+  <div style="flex:1;height:1px;background:rgba(52,199,89,0.25);"></div>
+  <span class="entity-badge" style="background:rgba(52,199,89,0.1);border-color:rgba(52,199,89,0.3);color:var(--prod-color);">
+    <span class="entity-badge-dot" style="background:var(--prod-color);"></span>
+    ENTIDAD 2 · PRODUCTO
+  </span>
+  <div style="flex:1;height:1px;background:rgba(52,199,89,0.25);"></div>
+</div>
+
+<!-- PRODUCTO · IDENTIDAD -->
+<div id="prod-identity" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-prod-identity" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--prod-color);"></div>
+    <div>
+      <div class="section-icon">📦</div>
+      <div class="section-subtitle" style="color:var(--prod-color);">Producto</div>
+      <div class="section-title">Identidad</div>
+      <div class="section-desc">El Producto es el objeto físico genérico. Se identifica por <code>model</code> + <code>quality</code>. Puede tener múltiples colores y composiciones.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-prod-identity">
+
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="field">identifier.id</td>
+        <td class="values">Entero largo<br><code>495700003</code></td>
+        <td class="desc">ID interno del producto.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+      <tr>
+        <td class="field">identifier.model</td>
+        <td class="values">String 4 dígitos<br><code>"0774"</code>, <code>"2223"</code>, <code>"6185"</code></td>
+        <td class="desc">Código de modelo. Identifica el diseño/forma del producto con independencia de su versión.</td>
+        <td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td>
+      </tr>
+      <tr>
+        <td class="field">identifier.quality</td>
+        <td class="values">String 3 dígitos<br><code>"350"</code>, <code>"399"</code>, <code>"540"</code></td>
+        <td class="desc">Versión del modelo. Cambia cuando se modifica materialmente el producto (tela, construcción…). Un mismo modelo puede tener varias qualities coexistentes.</td>
+        <td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td>
+      </tr>
+      <tr>
+        <td class="field">identifier.reference</td>
+        <td class="values">String<br><code>"00774350-V2026"</code></td>
+        <td class="desc">Referencia legible de producto: <code>{modelo}{quality}-V{campaña}</code>.</td>
+        <td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div></div>
+
+<!-- PRODUCTO · PROPIEDADES -->
+<div id="prod-props" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-prod-props" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--prod-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--prod-color);">Producto</div>
+      <div class="section-title">Propiedades y atributos</div>
+      <div class="section-desc">Clasificación jerárquica, estado, sistema de tallas y atributos de producto.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-prod-props">
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="prod-estado"><span>Estado</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="prod-estado">
+  <table>
+    <thead><tr><th>Campo</th><th>Valores posibles</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">state</td><td class="values"><span class="pill pill-green">STATE_BUYABLE</span><br><span class="pill pill-red">STATE_DELETED</span></td><td class="desc">Estado del producto. Un producto eliminado puede coexistir con su reemplazo (mismo modelo, quality diferente).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-7"><span>Classification — jerarquía de clasificación</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-7">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores observados</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">brand.group_code</td><td class="values"><code>"zara"</code> (id=1) · <code>"massimodutti"</code> (id=11) · <code>"zarahome"</code> (id=14)</td><td class="desc">Marca del producto.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">kind.id / kind.name</td><td class="values"><code>0 · Wear</code> · <code>2 · Fragance</code> · <code>4 · ZaraHome</code></td><td class="desc">Tipo de producto. Determina si tiene cares, medidas de ropa, etc.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">section.id / section.name</td><td class="values"><code>1 · WOMAN</code> · <code>2 · MAN</code> · <code>3 · KID</code> · <code>4 · HOME</code></td><td class="desc">Sección comercial del producto.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">family.id / family.name</td><td class="values">Ej: <code>73 · PANTALON</code> · <code>76 · CAMISA</code> · <code>117 · BISUTERIA</code> · <code>293 · ASIENTO</code> · <code>3733 · EAU DE PERFUME</code></td><td class="desc">Familia de producto dentro de la sección.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">subfamily.name</td><td class="values">Ej: <code>B. Pant Denim</code> · <code>TRENCH</code> · <code>BIS. COLLAR</code> · <code>FUNDA NORDICA</code> · <code>SILLAS.TABURETE</code></td><td class="desc">Subfamilia. Nivel de clasificación más granular.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-8"><span>Tallas — size_system_id</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-8">
+  <table>
+    <thead><tr><th>size_system_id</th><th>Brand · Section</th><th>Nomenclatura de tallas</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">2</td><td>Zara · WOMAN</td><td>XS / S / M / L / XL</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">8</td><td>Zara · MAN</td><td>S / M / L / XL / XXL</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">56</td><td>Zara Home · HOME (mueble)</td><td>TALLA ÚNICA (99)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">111</td><td>Zara · WOMAN (Fragance)</td><td>TALLA ÚNICA (99)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">371</td><td>Zara Home · HOME (textil)</td><td>Cama 90cm / 105cm / 135cm / 150cm / 180cm…</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">518</td><td>Massimo Dutti · WOMAN</td><td>S / M / L (tallas MD)</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">14304</td><td>Zara · KID</td><td>Por años + pulgadas: "6-7 años (47,2″)"</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="prod-attrs"><span>Atributos de Producto (attributes[])</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="prod-attrs">
+  <table>
+    <thead><tr><th>Subtype</th><th>Tipo attr</th><th>Identifier (ejemplos)</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">XFEATURE</td><td><span class="pill pill-blue">Valued</span></td><td><code>CUELLOS</code> · <code>MANGAS</code> · <code>ANCHURA</code> · <code>ALTOS</code> · <code>BAJOS</code></td><td class="desc">Características físicas del producto: tipo de cuello, manga, caída…</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XDENIM</td><td><span class="pill pill-blue">Valued</span></td><td><code>DENIM</code></td><td class="desc">Presente en toda la ropa analizada. El valor distingue si es denim o no.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XCOMPRADOR</td><td><span class="pill pill-blue">Valued</span></td><td><code>[comp_lvl_1]</code> · <code>[comp_lvl_2]</code> · <code>[comp_lvl_3]</code></td><td class="desc">Jerarquía de buyer/comprador hasta 3 niveles. Identifica la línea de compra interna.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XSECCIONES</td><td><span class="pill pill-green">Mark</span> / <span class="pill pill-blue">Valued</span></td><td><code>COL-SRA-BASIC</code> · <code>COL-CRO-MAN</code> · <code>COL-NINO-NINO_GLOBAL</code></td><td class="desc">Sección de colección (código buyer). Patrón: <code>COL-{BUYER}-{COLECCION}</code></td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XCOMMERCIALATTRIBUTE</td><td><span class="pill pill-blue">Valued</span></td><td><code>COMMERCIAL_ATTRIBUTE_LEVEL_1</code></td><td class="desc">Atributo comercial L1. Categoría interna de compra más granular.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XTARIFF_GROUP</td><td><span class="pill pill-blue">Valued</span></td><td><code>TARIFF_GROUP</code></td><td class="desc">Grupo tarifario. Determina a qué lista de precios pertenece el producto.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XTRIMAN</td><td><span class="pill pill-green">Mark</span></td><td><code>IS_RECYCLABLE</code></td><td class="desc">Flag de producto reciclable. Presente en toda la ropa observada.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">DYNAMICGRIDFILTER_*</td><td><span class="pill pill-purple">Label</span></td><td><code>C-SRA-FALDAS</code> · <code>C-CRO-PANTALONES</code> · <code>C-CRO-RELAXED_FIT</code> · <code>C-CRO-LINEN</code> · <code>C-NNO-BANO</code></td><td class="desc">Filtros de parrilla a nivel producto en base a propiedades y atributos (tipo, fit, material…). Patrón: <code>C-{BUYER_CODE}-{TIPO}</code></td><td class="origin"><span class="pill pill-orig-comprador">Comercial</span></td></tr>
+      <tr><td class="field">XALERT</td><td><span class="pill pill-blue">Valued</span></td><td><code>[war][alert]21</code> · <code>4</code> · <code>9</code> · <code>10</code></td><td class="desc">Alertas regulatorias. Solo en Fragance/Cosmetics (perfumes, aerosoles).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">XDANGEROUS_GOODS</td><td><span class="pill pill-green">Mark</span></td><td><code>DANGEROUS_GOODS</code></td><td class="desc">Flag de mercancía peligrosa (alcohol, aerosoles). Solo en Fragance.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</div></div>
+
+<!-- PRODUCTO · OTROS DATOS -->
+<div id="prod-data" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-prod-data" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--prod-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--prod-color);">Producto</div>
+      <div class="section-title">Otros datos: Compositions y Additional Info</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-prod-data">
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-9"><span>Compositions — mapa de materiales</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-9">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">compositions</td><td class="values">Mapa <code>"1"</code>, <code>"2"</code>, <code>"3"</code>… → JSON string</td><td class="desc">Diccionario de composiciones del producto. La clave es el <code>composition_id</code> que referencian los SKUs. El valor es un JSON con partes, materiales y porcentajes.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">parts[].description</td><td class="values"><code>"EXTERIOR"</code>, <code>"FORRO"</code>…</td><td class="desc">Nombre de la parte del producto.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">parts[].components[]<br>.material / .percentage</td><td class="values"><code>"acero 50%"</code>, <code>"vidrio 30%"</code><br><code>"algodón 98%"</code>, <code>"elastano 2%"</code></td><td class="desc">Material y porcentaje de cada componente. Datos de etiquetado legal.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-10"><span>Additional Info — campos a nivel producto</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-10">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">DEFAULT_NAME</td><td class="values">String<br><code>"ZARA OUD VIBRANT LEATHER EDP 100ML (NEW)"</code></td><td class="desc">Nombre interno del producto (no el nombre comercial traducido).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">isActiveCampaign</td><td class="values"><code>"true"</code> / <code>"false"</code></td><td class="desc">Flag de campaña activa.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+</div></div>
+
+
+<!-- ████████████████████████████████████████████████████████████
+     ENTIDAD 3 · COLOR
+     ████████████████████████████████████████████████████████████ -->
+
+<div style="display:flex;align-items:center;gap:14px;margin:40px 0 16px;">
+  <div style="flex:1;height:1px;background:rgba(191,90,242,0.25);"></div>
+  <span class="entity-badge" style="background:rgba(191,90,242,0.1);border-color:rgba(191,90,242,0.3);color:var(--color-color);">
+    <span class="entity-badge-dot" style="background:var(--color-color);"></span>
+    ENTIDAD 3 · COLOR
+  </span>
+  <div style="flex:1;height:1px;background:rgba(191,90,242,0.25);"></div>
+</div>
+
+<!-- COLOR · IDENTIDAD -->
+<div id="color-identity" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-color-identity" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--color-color);"></div>
+    <div>
+      <div class="section-icon">🎨</div>
+      <div class="section-subtitle" style="color:var(--color-color);">Color</div>
+      <div class="section-title">Identidad</div>
+      <div class="section-desc">Variante cromática de un Producto. Cada color tiene sus propias descripciones comerciales, instrucciones de cuidado y CCs asociados.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-color-identity">
+
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">id</td><td class="values">String numérico<br><code>"802"</code>, <code>"999"</code>, <code>"808"</code>, <code>"442"</code>, <code>"052"</code></td><td class="desc">ID interno del color. Forma parte de la referencia del CC y del SKU. Color <code>999</code> es el convencional para productos de Fragance/Cosmetics (sin color real).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">name</td><td class="values">String<br><code>"Gris"</code>, <code>"Brown"</code>, <code>"Azul pato"</code>, <code>"TINTED LEATHER"</code>, <code>"Beige claro"</code></td><td class="desc">Nombre comercial del color, en el idioma del mercado de la respuesta.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+</div></div>
+
+<!-- COLOR · PROPIEDADES -->
+<div id="color-props" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-color-props" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--color-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--color-color);">Color</div>
+      <div class="section-title">Propiedades</div>
+      <div class="section-desc">Descripciones comerciales, instrucciones de cuidado y clasificación cromática.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-color-props">
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-11"><span>Descriptions — contenido editorial</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-11">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">descriptions.name</td><td class="values">String<br><code>"JEANS SLIM FIT BÁSICO"</code></td><td class="desc">Nombre comercial del producto en este color (traducido al idioma del mercado). Presente en todos los tipos de producto.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">descriptions.long_description</td><td class="values">String (HTML / texto)<br><code>"Ajustados al cuerpo con cinco bolsillos…"</code></td><td class="desc">Descripción larga del producto para el PDP. Ausente en algunos colores (Massimo Dutti responseD).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-12"><span>Cares — instrucciones de cuidado</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-12">
+  <table>
+    <thead><tr><th>type</th><th>Significado</th><th>Valores observados</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">1</td><td>Lavado</td><td><code>[car]6</code> "LAVAR A MAQUINA MAX. 40ºC" · <code>[car]9</code> "NO LAVAR"</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">2</td><td>Blanqueado</td><td><code>[car]14</code> "NO USAR LEJÍA"</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">3</td><td>Planchado</td><td><code>[car]18</code> "PLANCHAR MÁX. 110ºC" · <code>[car]19</code> "NO PLANCHAR"</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">4</td><td>Limpieza en seco</td><td><code>[car]28</code> "NO LIMPIEZA EN SECO"</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">5</td><td>Secadora</td><td><code>[car]31</code> "SECADORA TEMP. REDUCIDA" · <code>[car]35</code> "NO USAR SECADORA"</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+  <div class="nota">Productos <strong>sin</strong> <code>cares[]</code>: Fragance/Cosmetics (perfumes, cosmética), Mueble ZaraHome, Bisutería metálica. Todos los Wear (ropa y textil hogar) tienen 5 instrucciones.</div>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-13"><span>Gamma Infos — clasificación cromática</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-13">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">gamma_infos[].id</td><td class="values">String<br><code>"9"</code> (Grises), <code>"28"</code> (Plateados), <code>"12"</code> (Metalizados)</td><td class="desc">ID de gama cromática. Un color puede pertenecer a más de una gama (ej: Plata → Plateados + Metalizados).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">gamma_infos[].name</td><td class="values"><code>"Grises"</code>, <code>"Plateados"</code>, <code>"Metalizados"</code></td><td class="desc">Nombre de la gama. Usado para filtros de color en la web.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">gamma_infos[].hex_code</td><td class="values"><code>"#C3C1C1"</code>, <code>"#C0C0C0"</code></td><td class="desc">Color representativo de la gama en hex. Usado para el swatch de color en la web.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">gamma_infos[].position</td><td class="values">Entero<br><code>4</code>, <code>27</code>, <code>13</code></td><td class="desc">Posición de la gama en el selector de color.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+  <div class="nota">Color <code>999 · TINTED LEATHER</code> (Fragance) tiene <code>gamma_infos[]</code> vacío. Es el color convencional para productos sin variante cromática real.</div>
+</div>
+  </div></div>
+
+<!-- COLOR · OTROS DATOS -->
+<div id="color-data" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-color-data" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--color-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--color-color);">Color</div>
+      <div class="section-title">Otros datos: CCs del color</div>
+      <div class="section-desc">Lista de Componentes Comerciales asociados a este color, con su estilismo y estado.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-color-data">
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-14"><span>ccs[] — CCs de este color</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-14">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">ccs[].id</td><td class="values">Entero largo</td><td class="desc">ID del CC.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">ccs[].reference</td><td class="values">String<br><code>"C02223399700000-V2026"</code></td><td class="desc">Referencia completa del CC.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">ccs[].styling.id</td><td class="values">Entero<br><code>0</code>, <code>1</code>, <code>20</code>, <code>560</code>…</td><td class="desc">Estilismo de este CC. Ver tabla de rangos en la sección CC.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">ccs[].state</td><td class="values"><span class="pill pill-green">CC_STATE_VISIBLE</span><br><span class="pill pill-red">CC_STATE_NOT_VISIBLE</span></td><td class="desc">Estado de visibilidad del CC.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">ccs[].available_from</td><td class="values">ISO 8601<br><code>"2026-02-08T01:00:00Z"</code></td><td class="desc">Fecha desde la que el CC está disponible.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">ccs[].media</td><td class="values">JSON string (igual que CC root)</td><td class="desc">Assets de imagen propios de este CC.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">ccs[].attributes[]</td><td class="values">STYLING_INFO, SMART_TAG, COLOR_HEX…</td><td class="desc">Atributos del CC. Idéntica estructura que <code>payload[].attributes[]</code>.</td><td class="origin"><span class="pill pill-orig-tbd">TBD</span></td></tr>
+      <tr><td class="field">ccs[].relations</td><td class="values">PACMAN-LOOK, OTHER_COLOR…</td><td class="desc">Relaciones propias de este CC (idéntica estructura que root-level).</td><td class="origin"><span class="pill pill-orig-tbd">TBD</span></td></tr>
+    </tbody>
+  </table>
+  <div class="callout callout-blue">
+    Un producto puede tener <strong>muchos colores</strong> (responseE tiene 17 colores) y cada color puede tener <strong>múltiples CCs</strong> (responseF tiene hasta 11 CCs por color en mueble). La cantidad de CCs por color depende de los mercados y ediciones activos.
+  </div>
+</div>
+  </div></div>
+
+
+<!-- ████████████████████████████████████████████████████████████
+     ENTIDAD 4 · SKU
+     ████████████████████████████████████████████████████████████ -->
+
+<div style="display:flex;align-items:center;gap:14px;margin:40px 0 16px;">
+  <div style="flex:1;height:1px;background:rgba(255,149,0,0.25);"></div>
+  <span class="entity-badge" style="background:rgba(255,149,0,0.1);border-color:rgba(255,149,0,0.3);color:var(--sku-color);">
+    <span class="entity-badge-dot" style="background:var(--sku-color);"></span>
+    ENTIDAD 4 · SKU
+  </span>
+  <div style="flex:1;height:1px;background:rgba(255,149,0,0.25);"></div>
+</div>
+
+<!-- SKU · IDENTIDAD -->
+<div id="sku-identity" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-sku-identity" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--sku-color);"></div>
+    <div>
+      <div class="section-icon">🏷️</div>
+      <div class="section-subtitle" style="color:var(--sku-color);">SKU</div>
+      <div class="section-title">Identidad</div>
+      <div class="section-desc">Unidad mínima stockable. Representa una instancia de Producto + Color + Talla. Puede haber varios SKUs por talla cuando hay reemplazos de quality.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-sku-identity">
+
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">identifier.id</td><td class="values">Entero largo<br><code>495677811</code></td><td class="desc">ID interno del SKU.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">identifier.reference</td><td class="values">String<br><code>"0077435080236-V2026"</code></td><td class="desc">Referencia del SKU: <code>{modelo}{quality}{color}{talla}-V{campaña}</code>.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">identifier.model</td><td class="values">String 4 dígitos</td><td class="desc">Mismo model del Producto padre.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">identifier.quality</td><td class="values">String 3 dígitos</td><td class="desc">Quality del SKU. Cuando hay dos SKUs para la misma talla, uno tendrá <code>STATE_DELETED</code> y quality diferente.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">size_id / size_name</td><td class="values">Heredado del Item padre<br><code>size_id:"36"</code>, <code>size_name:"36"</code><br><code>size_id:"99"</code>, <code>size_name:"TALLA ÚNICA"</code><br><code>size_id:"87"</code>, <code>size_name:"6-7 años (47,2″)"</code></td><td class="desc">Talla del SKU, heredada del Item que lo contiene.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-orange">
+    <strong>SKUs hermanados:</strong> un Item puede contener varios SKUs que representan variantes con características diferentes (ej: distinta quality o composición) pero que se venden como un mismo producto. El SKU activo tiene <span class="pill pill-green">STATE_BUYABLE</span> y los anteriores pueden tener <span class="pill pill-red">STATE_DELETED</span>. Coexisten en el sistema permitiendo trazabilidad de versiones. Observado en responseE (Funda Nórdica: 2 SKUs por talla) y responseJ (Pantalón: hasta 4 SKUs por talla).
+  </div>
+</div></div>
+
+<!-- SKU · PROPIEDADES -->
+<div id="sku-props" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-sku-props" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--sku-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--sku-color);">SKU</div>
+      <div class="section-title">Propiedades y atributos</div>
+      <div class="section-desc">Estado, disponibilidad, fabricación, composición, medidas y atributos regulatorios.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-sku-props">
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sku-estado"><span>Estado y disponibilidad</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sku-estado">
+  <table>
+    <thead><tr><th>Campo</th><th>Valores posibles</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">state</td><td class="values"><span class="pill pill-green">STATE_BUYABLE</span><br><span class="pill pill-red">STATE_DELETED</span></td><td class="desc">Estado del SKU. Solo los <code>BUYABLE</code> son comprables. Los <code>DELETED</code> pueden coexistir con su reemplazo.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">availability</td><td class="values"><span class="pill pill-green">AVAILABILITY_IN_STOCK</span><br><span class="pill pill-red">AVAILABILITY_OUT_OF_STOCK</span><br><span class="pill pill-orange">AVAILABILITY_COMING_SOON</span></td><td class="desc">Disponibilidad de stock del SKU.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">demand</td><td class="values"><span class="pill pill-blue">DEMAND_REGULAR</span><br><span class="pill pill-orange">DEMAND_RUNNING_OUT</span></td><td class="desc">Nivel de demanda. <code>RUNNING_OUT</code> indica últimas unidades.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+      <tr><td class="field">availability_info</td><td class="values"><code>{ in_stock:bool, subscription_enabled:bool, force_subscription:bool, demand:string, status:string }</code></td><td class="desc">Resumen compuesto de disponibilidad. Agrupa los campos anteriores en un único objeto.</td><td class="origin"><span class="pill pill-orig-sistema">Sistema</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-15"><span>Fabricación y composición</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-15">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">country_manufacture</td><td class="values"><code>"MA"</code> Marruecos · <code>"PK"</code> Pakistán · <code>"BD"</code> Bangladesh · <code>"VN"</code> Vietnam · <code>"CN"</code> China · <code>"ES"</code> España</td><td class="desc">País de fabricación del SKU. Puede diferir de los atributos CONFECTION/WEAVING (que indican país por proceso).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">composition_id</td><td class="values">Entero<br><code>1</code>, <code>2</code>, <code>3</code></td><td class="desc">Referencia al mapa <code>product.compositions</code>. Indica qué fórmula de materiales aplica a este SKU.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">size_fit</td><td class="values"><code>"Regular"</code></td><td class="desc">Ajuste de talla. Único valor observado en todos los responses.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-16"><span>Measures — medidas físicas del artículo</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-16">
+  <table>
+    <thead><tr><th>Tipología</th><th>Medidas observadas</th><th>Unidades</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">Pantalón / Jeans</td><td>CINTURA_PRENDA · TIRO_DELANTERO · TIRO_TRASERO · CADERA_PRENDA · LARGO_DELANTERO + weight</td><td>cm / g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">Camisa / Prenda top</td><td>~4 medidas (ancho, largo, manga…) + weight</td><td>cm / g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">Abrigo / Trench</td><td>~4 medidas (ancho, manga, largo, cadera…) + weight</td><td>cm / g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">Perfume / Cosmetics</td><td>ALTO · LARGO · ANCHO · volume</td><td>cm / ml / g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">Mueble (Zara Home)</td><td>~7 medidas (alto, ancho, profundo en cm y pulgadas) + weight</td><td>cm / " / g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">Bisutería</td><td>solo weight</td><td>g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">Textil hogar / Kids</td><td>solo weight</td><td>g</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+  <div class="nota">Los campos <code>id</code> y <code>name</code> de cada measure no están expuestos con valor en los nuevos responses. La unidad <code>"</code> (pulgadas) aparece junto a cm en muebles ZaraHome, con las mismas medidas en ambas unidades.</div>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sku-attrs"><span>Atributos del SKU (attributes[])</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sku-attrs">
+  <table>
+    <thead><tr><th>Identifier</th><th>Tipo attr</th><th>Valores observados</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">GTINCODE</td><td><span class="pill pill-blue">Valued</span></td><td><code>"8447484608469"</code></td><td class="desc">Código EAN/GTIN del artículo físico. Estándar GS1.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">IKPU</td><td><span class="pill pill-blue">Valued</span></td><td><code>"06203004001…"</code></td><td class="desc">Código aduanero para mercados CIS (Rusia, Kazajistán…).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">SIZE_GROUP_FILTER</td><td><span class="pill pill-blue">Valued</span></td><td><code>"XECOMLOAD_SIZE_GROUP_201"</code></td><td class="desc">Grupo de tallas para filtros de ecommerce.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">SYNTHETIC_FIBER_PERCENTAGE</td><td><span class="pill pill-blue">Valued</span></td><td><code>"0"</code> / <code>"1"</code></td><td class="desc">Porcentaje de fibra sintética. Requerimiento regulatorio EU.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">CONFECTION</td><td><span class="pill pill-green">Mark</span> + <span class="pill pill-blue">Valued</span></td><td><code>"MA"</code>, <code>"BD"</code>, <code>"CN"</code>, <code>"PK"</code></td><td class="desc">País de confección. Aparece como Mark (flag) y como Valued (código ISO) en el mismo SKU.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">WEAVING</td><td><span class="pill pill-blue">Valued</span></td><td><code>"PK"</code>, <code>"CN"</code></td><td class="desc">País de tejido.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">DYEING-PRINTING</td><td><span class="pill pill-blue">Valued</span></td><td><code>"PK"</code>, <code>"CN"</code></td><td class="desc">País de tinte y estampación.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">PACKAGING</td><td><span class="pill pill-green">Mark</span></td><td>—</td><td class="desc">Flag: el SKU tiene packaging especial.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-17"><span>Additional Info — campos a nivel SKU</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-17">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo / Valores</th><th>Descripción</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">articleId</td><td class="values">String<br><code>"4269203"</code></td><td class="desc">ID de artículo (referencia logística interna).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">sizeId</td><td class="values">String<br><code>"99"</code>, <code>"36"</code></td><td class="desc">ID de talla interno (puede diferir del size_id del Item).</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">hsCode</td><td class="values">String<br><code>"330300"</code></td><td class="desc">Código arancelario (HS Code). Usado en documentación aduanera internacional.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">colorId</td><td class="values">String<br><code>"5628"</code></td><td class="desc">ID interno de color en el sistema logístico. Diferente del <code>color.id</code> del modelo de producto.</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+</div>
+  </div></div>
+
+<!-- SKU · OTROS DATOS -->
+<div id="sku-data" class="surface section-card">
+  <div class="section-header collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="body-sku-data" style="cursor:pointer;">
+    <div class="section-accent" style="background:var(--sku-color);"></div>
+    <div>
+      <div class="section-subtitle" style="color:var(--sku-color);">SKU</div>
+      <div class="section-title">Otros datos: Tariffs (Precios)</div>
+      <div class="section-desc">Estructura de precios por mercado y tramos temporales.</div>
+    <span class="caret" style="margin-left:auto;font-size:14px;">▾</span></div>
+  </div>
+  <div class="collapsible-body" id="body-sku-data">
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-18"><span>Tariff — estructura</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-18">
+  <pre>{
+  <span class="k">"name"</span>: { "value": <span class="s">"{BRAND}_{MARKET} ProductsPriceList"</span> },
+  <span class="k">"offers"</span>: [
+    {
+      <span class="k">"start_date"</span>: <span class="s">"2025-10-27T00:00:00Z"</span>,     <span class="c">← inicio vigencia</span>
+      <span class="k">"end_date"</span>:   <span class="s">"2025-10-28T00:00:00Z"</span>,     <span class="c">← fin vigencia</span>
+      <span class="k">"price"</span>: {
+        <span class="k">"amount"</span>: {
+          <span class="k">"value"</span>:    { "value": <span class="s">"1995"</span> },    <span class="c">← céntimos → 19,95€</span>
+          <span class="k">"currency"</span>: { "value": <span class="s">"EUR"</span> }
+        }
+      },
+      <span class="k">"milestone_code"</span>: <span class="s">""</span>               <span class="c">← vacío = precio regular</span>
+    }
+    <span class="c">/* + 2 tramos más: temporada actual y siguiente */</span>
+  ]
+}</pre>
+
+    </div>
+<div class="sub-label collapsible-trigger open" onclick="toggleCollapsible(this)" data-id="sub-collapse-19"><span>Tariff name — mercados identificados</span><span class="caret">▾</span></div>
+  <div class="collapsible-body" id="sub-collapse-19">
+  <table>
+    <thead><tr><th>Tariff name</th><th>Moneda</th><th>Mercado</th><th>Origen</th></tr></thead>
+    <tbody>
+      <tr><td class="field">ZARA_ES ProductsPriceList</td><td>EUR</td><td>España</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">ZARA_SA ProductsPriceList</td><td>SAR</td><td>Arabia Saudí</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+      <tr><td class="field">ZARA_US ProductsPriceList</td><td>USD</td><td>EEUU</td><td class="origin"><span class="pill pill-orig-maestro">Maestro</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-blue">
+    <strong>El precio se almacena en céntimos de la moneda local</strong> (entero, sin decimales). Patrón de tramos: <strong>1.</strong> Transición (1 día) → <strong>2.</strong> Temporada actual (~11 meses) → <strong>3.</strong> Siguiente temporada (~6 meses). El tariff name sigue el patrón <code>{BRAND}_{COUNTRY} ProductsPriceList</code>.
+    </div>
+</div>
+
+  </div></div></div>
+
+<div class="footer-line">
+  Generado a partir de response1–5.json + responseA–J.json (15 ficheros) · GetCommercialComponent v1 · Marzo 2026 · v3
+</div>
+
+</div><!-- /page-wrapper -->
+
+<script>
+function toggleCollapsible(trigger) {
+  const id = trigger.getAttribute('data-id');
+  const body = document.getElementById(id);
+  if (!body) return;
+  const isOpen = !body.classList.contains('collapsed');
+  if (isOpen) {
+    // Collapse all inner sub-sections first
+    body.querySelectorAll('.collapsible-trigger.open').forEach(innerTrigger => {
+      const innerId = innerTrigger.getAttribute('data-id');
+      const innerBody = document.getElementById(innerId);
+      if (innerBody && !innerBody.classList.contains('collapsed')) {
+        innerBody.classList.add('collapsed');
+        innerBody.style.maxHeight = '0';
+        innerTrigger.classList.remove('open');
+      }
+    });
+    body.style.maxHeight = body.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      body.classList.add('collapsed');
+      body.style.maxHeight = '0';
+      trigger.classList.remove('open');
+    });
+  } else {
+    body.classList.remove('collapsed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    trigger.classList.add('open');
+    setTimeout(() => { body.style.maxHeight = 'none'; }, 360);
+  }
+}
+// Init: set max-height on all open collapsibles
+document.querySelectorAll('.collapsible-body').forEach(b => {
+  b.style.maxHeight = 'none';
+});
+
+
+// Nav active on scroll
+const ids = ['overview','origen','cc-identity','cc-props','cc-data','prod-identity','prod-props','prod-data','color-identity','color-props','color-data','sku-identity','sku-props','sku-data'];
+window.addEventListener('scroll', () => {
+  let current = '';
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 80) current = id;
+  });
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>
